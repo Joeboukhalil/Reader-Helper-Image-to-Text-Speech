@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reader Helper – Image to Speech</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Tesseract.js -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  margin: 0;
+  padding: 20px;
+  text-align: center;
+}
+
+.container {
+  max-width: 600px;
+  margin: auto;
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+h1 {
+  margin-bottom: 10px;
+}
+
+input[type="file"] {
+  margin: 15px 0;
+}
+
+button {
+  padding: 10px 16px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 5px;
+}
+
+.primary {
+  background: #007bff;
+  color: white;
+}
+
+.secondary {
+  background: #28a745;
+  color: white;
+}
+
+.stop {
+  background: #dc3545;
+  color: white;
+}
+
+#preview {
+  max-width: 100%;
+  margin-top: 15px;
+  border-radius: 6px;
+}
+
+#output {
+  margin-top: 15px;
+  padding: 10px;
+  background: #f1f1f1;
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  text-align: left;
+  white-space: pre-wrap;
+}
+
+#status {
+  margin-top: 10px;
+  font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>📖 Reader Helper</h1>
+  <p>Upload or take a photo of a page and listen to it</p>
+
+  <!-- FIXED: camera + upload -->
+  <input type="file" accept="image/*" id="imageInput">
+
+  <br>
+  <button class="primary" onclick="readImage()">Extract Text</button>
+  <button class="secondary" onclick="speakText()">Read Aloud</button>
+  <button class="stop" onclick="stopSpeech()">Stop</button>
+
+  <div id="status"></div>
+
+  <img id="preview">
+  <div id="output"></div>
+</div>
+
+<script>
+let extractedText = "";
+let utterance;
+
+function readImage() {
+  const fileInput = document.getElementById("imageInput");
+  const file = fileInput.files[0];
+
+  if (!file) {
+    alert("Please upload or take an image");
+    return;
+  }
+
+  const preview = document.getElementById("preview");
+  preview.src = URL.createObjectURL(file);
+
+  document.getElementById("status").innerText = "🔍 Reading text...";
+  document.getElementById("output").innerText = "";
+
+  Tesseract.recognize(
+    file,
+    "eng",
+    {
+      logger: m => {
+        if (m.progress) {
+          document.getElementById("status").innerText =
+            "Processing: " + Math.round(m.progress * 100) + "%";
+        }
+      }
+    }
+  ).then(({ data: { text } }) => {
+    extractedText = text.trim();
+    document.getElementById("output").innerText =
+      extractedText || "No text detected.";
+    document.getElementById("status").innerText = "✅ Text extracted";
+  }).catch(() => {
+    document.getElementById("status").innerText = "❌ Error reading image";
+  });
+}
+
+function speakText() {
+  if (!extractedText) {
+    alert("No text to read");
+    return;
+  }
+
+  stopSpeech();
+
+  utterance = new SpeechSynthesisUtterance(extractedText);
+  utterance.lang = "en-US";
+  utterance.rate = 1;
+  utterance.pitch = 1;
+
+  speechSynthesis.speak(utterance);
+}
+
+function stopSpeech() {
+  if (speechSynthesis.speaking) {
+    speechSynthesis.cancel();
+  }
+}
+</script>
+
+</body>
+</html>
